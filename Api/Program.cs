@@ -51,54 +51,7 @@ builder.Services.AddOpenApi(options =>
 var app = builder.Build();
 
 // Seed data
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Students.AddRange(
-        new Domain.Entities.Student
-        {
-            Id = Guid.NewGuid(),
-            FirstName = "John",
-            LastName = "Doe",
-            Email = "john.doe@example.com",
-            DateOfBirth = new DateTime(2000, 1, 15)
-        },
-        new Domain.Entities.Student
-        {
-            Id = Guid.NewGuid(),
-            FirstName = "Jane",
-            LastName = "Smith",
-            Email = "jane.smith@example.com",
-            DateOfBirth = new DateTime(2001, 5, 20)
-        }
-    );
-
-    dbContext.Courses.AddRange(
-        new Domain.Entities.Course
-        {
-            Id = Guid.NewGuid(),
-            Title = "Introduction to Programming",
-            Code = "CS101",
-            Credits = 3
-        },
-        new Domain.Entities.Course
-        {
-            Id = Guid.NewGuid(),
-            Title = "Data Structures",
-            Code = "CS201",
-            Credits = 4
-        },
-        new Domain.Entities.Course
-        {
-            Id = Guid.NewGuid(),
-            Title = "Database Systems",
-            Code = "CS301",
-            Credits = 3
-        }
-    );
-
-    dbContext.SaveChanges();
-}
+await app.Services.MigrateAndSeedAsync();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
