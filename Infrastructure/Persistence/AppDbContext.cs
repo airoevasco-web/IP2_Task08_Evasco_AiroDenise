@@ -1,3 +1,4 @@
+
 namespace Infrastructure.Persistence;
 
 using Application.Abstractions.Data;
@@ -12,6 +13,7 @@ public sealed class AppDbContext : DbContext, IAppDbContext
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<Admission> Admissions => Set<Admission>();
     public DbSet<AdmissionCourse> AdmissionCourses => Set<AdmissionCourse>();
+    public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +50,22 @@ public sealed class AppDbContext : DbContext, IAppDbContext
             entity.HasOne(ac => ac.Course)
                   .WithMany()
                   .HasForeignKey(ac => ac.CourseId);
+        });
+
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasKey(u => u.Id);
+            entity.Property(u => u.Email).IsRequired().HasMaxLength(200);
+            entity.Property(u => u.PasswordHash).IsRequired().HasMaxLength(512);
+            entity.Property(u => u.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(u => u.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(u => u.Role).IsRequired().HasConversion<int>();
+            entity.HasIndex(u => u.Email).IsUnique();
+
+            entity.HasOne(u => u.Student)
+                  .WithMany()
+                  .HasForeignKey(u => u.StudentId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

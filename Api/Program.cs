@@ -1,3 +1,4 @@
+
 using Api.Features.Students;
 using Api.Features.Courses;
 using Api.Features.Admissions;
@@ -21,7 +22,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Database
 builder.Services.AddDbContext<IAppDbContext, AppDbContext>(options =>
-options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
+
+// Password Hasher
+builder.Services.AddScoped<
+    Application.Abstractions.IPasswordHasher,
+    Infrastructure.Authentication.PasswordHasher>();
+
 // Validators
 builder.Services.AddValidatorsFromAssemblyContaining<CreateStudentValidator>();
 
@@ -34,7 +41,6 @@ builder.Services.AddScoped<IQueryHandler<GetAllCoursesQuery, Result<GetAllCourse
 builder.Services.AddScoped<IQueryHandler<GetCourseByIdQuery, Result<GetCourseByIdResponse>>, GetCourseByIdQueryHandler>();
 builder.Services.AddScoped<ICommandHandler<CreateAdmissionCommand, Result<CreateAdmissionResponse>>, CreateAdmissionCommandHandler>();
 builder.Services.AddScoped<IQueryHandler<GetAdmissionByIdQuery, Result<GetAdmissionByIdResponse>>, GetAdmissionByIdQueryHandler>();
-
 
 // API
 builder.Services.AddEndpointsApiExplorer();
