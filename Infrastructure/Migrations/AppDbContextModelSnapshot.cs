@@ -137,6 +137,19 @@ namespace Infrastructure.Migrations
                     b.ToTable("Courses");
                 });
 
+            modelBuilder.Entity("Domain.Entities.RevokedToken", b =>
+                {
+                    b.Property<string>("Jti")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Jti");
+
+                    b.ToTable("RevokedTokens");
+                });
+
             modelBuilder.Entity("Domain.Entities.Student", b =>
                 {
                     b.Property<Guid>("Id")

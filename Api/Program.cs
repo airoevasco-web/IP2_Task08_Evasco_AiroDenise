@@ -20,11 +20,14 @@ using Application.Features.Courses.GetCourseById;
 using Application.Features.Admissions.CreateAdmission;
 using Application.Features.Admissions.GetAdmissionById;
 using Domain.Common;
+using Domain.Entities;
 using FluentValidation;
 using Infrastructure.Authentication;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -51,6 +54,9 @@ builder.Services.AddOptions<JwtOptions>()
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
+// Token Cleanup Background Service
+builder.Services.AddHostedService<TokenCleanupService>();
+
 // JWT Authentication
 var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
 
@@ -68,6 +74,73 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtSection["SigningKey"]!)),
             ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var dbContext = context.HttpContext.RequestServices
+                    .GetRequiredService<IAppDbContext>();
+
+                var cancellationToken = context.HttpContext.RequestAborted;
+
+                // Check single-token revocation
+                var jti = context.Principal?
+                    .FindFirstValue(JwtRegisteredClaimNames.Jti);
+
+                if (string.IsNullOrWhiteSpace(jti))
+                {
+                    context.Fail("Token ID is missing.");
+                    return;
+                }
+
+                var isRevoked = await dbContext.RevokedTokens
+                    .AnyAsync(r => r.Jti == jti, cancellationToken);
+
+                if (isRevoked)
+                {
+                    context.Fail("This access token has been revoked.");
+                    return;
+                }
+
+                // Check logout-all timestamp
+                var sub = context.Principal?
+                    .FindFirstValue(JwtRegisteredClaimNames.Sub)
+                    ?? context.Principal?
+                    .FindFirstValue(ClaimTypes.NameIdentifier);
+
+                var iat = context.Principal?
+                    .FindFirstValue(JwtRegisteredClaimNames.Iat);
+
+                if (!Guid.TryParse(sub, out var userId) ||
+                    !long.TryParse(iat, out var issuedAtUnix))
+                {
+                    context.Fail("Invalid token claims.");
+                    return;
+                }
+
+                var appUser = await dbContext.Users
+                    .FirstOrDefaultAsync(
+                        u => u.Id == userId,
+                        cancellationToken);
+
+                if (appUser is null)
+                {
+                    context.Fail("User account not found.");
+                    return;
+                }
+
+                var issuedAtUtc = DateTimeOffset
+                    .FromUnixTimeSeconds(issuedAtUnix)
+                    .UtcDateTime;
+
+                if (appUser.TokensValidFromUtc is DateTime validFromUtc &&
+                    issuedAtUtc < validFromUtc)
+                {
+                    context.Fail("This session has been revoked.");
+                }
+            }
         };
     });
 

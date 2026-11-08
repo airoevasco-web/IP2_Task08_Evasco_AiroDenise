@@ -7,6 +7,7 @@ using Application.Features.Courses.CreateCourse;
 using Application.Features.Courses.GetAllCourses;
 using Application.Features.Courses.GetCourseById;
 using Domain.Common;
+using Microsoft.AspNetCore.Authorization;
 
 public static class CourseEndpoints
 {
@@ -21,6 +22,7 @@ public static class CourseEndpoints
             .WithSummary("Get all courses");
 
         group.MapPost("/", Create)
+            .RequireAuthorization(policy => policy.RequireRole("Registrar"))
             .WithName("CreateCourse")
             .WithSummary("Create a new course");
 

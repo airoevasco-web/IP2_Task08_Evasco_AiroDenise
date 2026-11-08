@@ -24,13 +24,19 @@ public sealed class JwtTokenService(
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(
+                JwtRegisteredClaimNames.Iat,
+                new DateTimeOffset(now).ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64),
             new(ClaimTypes.Role, user.Role.ToString()),
             new("full_name", $"{user.FirstName} {user.LastName}")
         };
 
         if (user.StudentId is not null)
         {
-            claims.Add(new Claim("student_id", user.StudentId.Value.ToString()));
+            claims.Add(new Claim(
+                "student_id",
+                user.StudentId.Value.ToString()));
         }
 
         var key = new SymmetricSecurityKey(
